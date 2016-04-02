@@ -5,7 +5,7 @@
 ````
 git clone https://github.com/ludelvs/tmux
 cd tmux
-sh setting.sh
+sh setup.sh
 ````
 
 ## Setting file
