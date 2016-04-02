@@ -1,0 +1,54 @@
+#!/bin/bash
+
+
+if [ "$1" == "-f" ]; then
+  if [ -n "$2" ]; then
+    if [ -f "$2" ]; then
+      HOST1=`cat $2 |head -1`
+      HOST_LIST=`cat $2 |tail -n +2`
+    else
+      echo "Error: No such file."
+      exit
+    fi
+  else
+    echo "Error: please appoint host list file."
+    exit
+  fi
+else
+  HOST1=$1
+  shift
+  HOST_LIST=$*
+fi
+
+
+if [ -n "$SESSION_NAME" ];then
+  session=$SESSION_NAME
+else
+  session=multi-ssh-`date +%s`
+fi
+window=multi-ssh
+
+### tmuxのセッションを作成
+if [ -z "`pgrep tmux`" ]; then
+  tmux new-session -d -n $window -s $session
+fi
+
+### 各ホストにsshログイン
+# 最初の1台はsshするだけ
+tmux send-keys "ssh $HOST1" C-m
+
+# 残りはpaneを作成してからssh
+for i in $HOST_LIST;do
+  tmux split-window
+  tmux select-layout tiled
+  tmux send-keys "ssh $i" C-m \; pipe-pane -o '/bin/sh -c "while read -r LINE; do echo \"[\$(date +\"%%Y_%%m%%d_%%H%%M%%S_%%N\")] \${LINE}\" >> \${TODAY_LOG_DIR}/\$(date +%Y%m%d-%H%M%S)-#S.#I.#P.#W.log; done "'
+done
+
+### 最初のpaneを選択状態にする
+tmux select-pane -t 0
+
+### paneの同期モードを設定
+tmux set-window-option synchronize-panes on
+
+### セッションにアタッチ
+tmux attach-session -t $session
